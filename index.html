@@ -235,32 +235,28 @@
         </div>
         <div class="actions">
           <button onclick="saveTransfer()">SAVE TRANSFER</button>
-          <button class="light" onclick="toggleScanner()">SCAN BARCODE</button>
-          <button class="light" onclick="document.getElementById('ticketPhoto').click()">PHOTO OCR</button>
+          <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
           <button class="secondary" onclick="manualFillPrompt()">MANUAL ENTRY</button>
         </div>
-        <div class="help">Barcode scan tries to read numbers only. If ticket has no barcode, use photo mode or manual entry.</div>
-
-        <div id="scannerBox" class="video-wrap hidden">
-          <h3>SCAN BARCODE</h3>
-          <video id="video" autoplay playsinline></video>
-          <canvas id="scanCanvas" class="hidden"></canvas>
-          <div class="actions">
-            <button class="green" onclick="startScanner()">START CAMERA</button>
-            <button class="red" onclick="stopScanner()">STOP CAMERA</button>
-          </div>
-          <div class="help" id="scanStatus">Ready to scan.</div>
-        </div>
+        <div class="help">Use the live camera to capture a ticket directly. Barcode mode has been removed.</div>
 
         <div class="ocr-box">
-          <h3>PHOTO OCR TICKET CAPTURE</h3>
+          <h3>LIVE TICKET CAMERA</h3>
+          <div id="ticketCameraBox" class="video-wrap hidden">
+            <video id="ticketVideo" autoplay playsinline></video>
+            <canvas id="ticketCanvas" class="hidden"></canvas>
+            <div class="actions">
+              <button class="green" onclick="captureTicketPhoto()">CAPTURE TICKET</button>
+              <button class="red" onclick="stopTicketCamera()">STOP CAMERA</button>
+            </div>
+          </div>
           <input id="ticketPhoto" type="file" accept="image/*" capture="environment" class="hidden" />
           <img id="photoPreview" class="preview hidden" alt="Ticket preview" />
           <div class="actions">
-            <button class="light" onclick="document.getElementById('ticketPhoto').click()">CHOOSE FILE / TAKE PHOTO</button>
+            <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
             <button class="green" onclick="fakeReadTicket()">READ TICKET</button>
           </div>
-          <div id="ocrResult" class="help">Photo OCR in this file uses simple text extraction fallback. For best results, enter the values if needed.</div>
+          <div id="ocrResult" class="help">This version opens the camera directly, captures the ticket, and then lets the employee confirm the extracted values.</div>
         </div>
       </div>
 
@@ -488,68 +484,47 @@
       persist();
     }
 
-    // Barcode scanning using BarcodeDetector when available.
-    let scanStream = null;
-    let scanLoop = null;
-    const video = document.getElementById('video');
-    const scanCanvas = document.getElementById('scanCanvas');
-    const scanStatus = document.getElementById('scanStatus');
-    const scannerBox = document.getElementById('scannerBox');
-    function toggleScanner() {
-      scannerBox.classList.toggle('hidden');
-    }
-    async function startScanner() {
+    let ticketStream = null;
+    const ticketVideo = document.getElementById('ticketVideo');
+    const ticketCanvas = document.getElementById('ticketCanvas');
+    const ticketCameraBox = document.getElementById('ticketCameraBox');
+
+    async function startTicketCamera() {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not available in this browser.');
-        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = scanStream;
-        scanStatus.textContent = 'Camera started. Point at a barcode or QR code.';
-        scanFrames();
+        stopTicketCamera();
+        ticketStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        ticketVideo.srcObject = ticketStream;
+        ticketCameraBox.classList.remove('hidden');
+        document.getElementById('ocrResult').textContent = 'Camera opened. Hold ticket flat and tap CAPTURE TICKET.';
       } catch (e) {
-        scanStatus.textContent = e.message || 'Could not start camera.';
+        document.getElementById('ocrResult').textContent = e.message || 'Could not open camera.';
       }
     }
-    function stopScanner() {
-      if (scanLoop) cancelAnimationFrame(scanLoop);
-      if (scanStream) scanStream.getTracks().forEach(t => t.stop());
-      scanStream = null;
-      video.srcObject = null;
-      scanStatus.textContent = 'Scanner stopped.';
-    }
-    async function scanFrames() {
-      const detectorSupported = 'BarcodeDetector' in window;
-      const formats = ['code_128','qr_code','ean_13','ean_8','upc_a','upc_e'];
-      const detector = detectorSupported ? new BarcodeDetector({ formats }) : null;
-      const ctx = scanCanvas.getContext('2d');
 
-      async function tick() {
-        if (video.readyState >= 2) {
-          scanCanvas.width = video.videoWidth;
-          scanCanvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
-          if (detector) {
-            try {
-              const codes = await detector.detect(scanCanvas);
-              if (codes.length) {
-                const raw = codes[0].rawValue || '';
-                const cleaned = cleanOrderId(raw);
-                if (cleaned) {
-                  document.getElementById('orderId').value = cleaned;
-                  scanStatus.textContent = 'Scanned order ID: ' + cleaned;
-                  stopScanner();
-                  return;
-                }
-              }
-            } catch (e) {
-              scanStatus.textContent = 'Scan error. Try better lighting.';
-            }
-          } else {
-            scanStatus.textContent = 'Live barcode scan is not supported in this browser. Use manual entry or photo mode.';
-          }
-        }
-        scanLoop = requestAnimationFrame(tick);
+    function stopTicketCamera() {
+      if (ticketStream) {
+        ticketStream.getTracks().forEach(t => t.stop());
+        ticketStream = null;
       }
-      tick();
+      ticketVideo.srcObject = null;
+    }
+
+    function captureTicketPhoto() {
+      if (!ticketVideo.srcObject) {
+        document.getElementById('ocrResult').textContent = 'Open the camera first.';
+        return;
+      }
+      const ctx = ticketCanvas.getContext('2d');
+      ticketCanvas.width = ticketVideo.videoWidth || 1280;
+      ticketCanvas.height = ticketVideo.videoHeight || 720;
+      ctx.drawImage(ticketVideo, 0, 0, ticketCanvas.width, ticketCanvas.height);
+      const dataUrl = ticketCanvas.toDataURL('image/png');
+      const img = document.getElementById('photoPreview');
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+      stopTicketCamera();
+      document.getElementById('ocrResult').textContent = 'Ticket captured. Tap READ TICKET to confirm the values.';
     }
 
     function fakeReadTicket() {
