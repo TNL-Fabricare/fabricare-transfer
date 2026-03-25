@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fabricare Transfer System</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <style>
     :root {
       --bg: #f5f7fb;
@@ -165,7 +166,11 @@
       padding: 12px;
       background: #fafcff;
     }
-    video, canvas, img.preview { width: 100%; border-radius: 12px; background: #000; }
+    video, canvas, img.preview {
+      width: 100%;
+      border-radius: 12px;
+      background: #000;
+    }
     .hidden { display: none; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     @media (max-width: 900px) {
@@ -186,6 +191,7 @@
     <div class="grid" style="margin-top:16px;">
       <div class="left card">
         <h2>CREATE TRANSFER</h2>
+
         <div class="row">
           <div>
             <label for="fromStore">FROM STORE</label>
@@ -196,6 +202,7 @@
             <select id="toStore"></select>
           </div>
         </div>
+
         <div class="row">
           <div>
             <label for="orderId">ORDER ID</label>
@@ -206,6 +213,7 @@
             <input id="customerName" placeholder="Example: WARNER, LENA" />
           </div>
         </div>
+
         <div class="row">
           <div>
             <label for="itemCount">ITEM COUNT</label>
@@ -223,6 +231,7 @@
             </select>
           </div>
         </div>
+
         <div class="row">
           <div>
             <label for="sentBy">SENT BY</label>
@@ -233,15 +242,18 @@
             <input id="notes" placeholder="Optional" />
           </div>
         </div>
+
         <div class="actions">
           <button onclick="saveTransfer()">SAVE TRANSFER</button>
           <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
           <button class="secondary" onclick="manualFillPrompt()">MANUAL ENTRY</button>
         </div>
+
         <div class="help">Use the live camera to capture a ticket directly. Barcode mode has been removed.</div>
 
         <div class="ocr-box">
-          <h3>LIVE TICKET CAMERA</h3>
+          <h3>LIVE TICKET CAMERA + AUTO OCR</h3>
+
           <div id="ticketCameraBox" class="video-wrap hidden">
             <video id="ticketVideo" autoplay playsinline></video>
             <canvas id="ticketCanvas" class="hidden"></canvas>
@@ -250,13 +262,15 @@
               <button class="red" onclick="stopTicketCamera()">STOP CAMERA</button>
             </div>
           </div>
-          <input id="ticketPhoto" type="file" accept="image/*" capture="environment" class="hidden" />
+
           <img id="photoPreview" class="preview hidden" alt="Ticket preview" />
+
           <div class="actions">
             <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
             <button class="green" onclick="fakeReadTicket()">READ TICKET</button>
           </div>
-          <div id="ocrResult" class="help">This version opens the camera directly, captures the ticket, and then lets the employee confirm the extracted values.</div>
+
+          <div id="ocrResult" class="help">This version opens the camera directly and uses OCR to read the ticket automatically. Review the extracted values before saving.</div>
         </div>
       </div>
 
@@ -295,30 +309,24 @@
     fromStore.value = 'fabricare';
     toStore.value = 'Fort stewart D/C';
 
-    document.getElementById('ticketPhoto').addEventListener('change', e => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      const img = document.getElementById('photoPreview');
-      img.src = url;
-      img.classList.remove('hidden');
-      document.getElementById('ocrResult').textContent = 'Photo loaded. Tap READ TICKET, then review the extracted values.';
-    });
-
     function load() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
       catch { return []; }
     }
+
     function persist() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
       render();
     }
+
     function cleanOrderId(value) {
       return String(value || '').replace(/[^0-9]/g, '');
     }
+
     function saveTransfer() {
       const orderId = cleanOrderId(document.getElementById('orderId').value);
-      if (!orderId) return alert('Please enter or scan an Order ID.');
+      if (!orderId) return alert('Please enter an Order ID.');
+
       const rec = {
         id: crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now(),
         orderId,
@@ -334,15 +342,22 @@
         receivedAt: '',
         returnedAt: ''
       };
+
       records.unshift(rec);
       clearForm();
       persist();
     }
+
     function clearForm() {
       ['orderId','customerName','sentBy','notes'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('itemCount').value = 1;
       document.getElementById('serviceType').value = 'Dry Cleaning';
+      const preview = document.getElementById('photoPreview');
+      preview.src = '';
+      preview.classList.add('hidden');
+      document.getElementById('ocrResult').textContent = 'Ready for next ticket.';
     }
+
     function statusClass(status) {
       return {
         'In Transit':'b-intransit',
@@ -352,6 +367,7 @@
         'Exception':'b-exception'
       }[status] || 'b-intransit';
     }
+
     function updateStatus(id, status) {
       const r = records.find(x => x.id === id);
       if (!r) return;
@@ -360,6 +376,7 @@
       if (status === 'Returned' || status === 'Completed') r.returnedAt = new Date().toLocaleString();
       persist();
     }
+
     function markException(id) {
       const note = prompt('Describe the issue:') || '';
       const r = records.find(x => x.id === id);
@@ -368,6 +385,7 @@
       r.notes = [r.notes, note].filter(Boolean).join(' | ');
       persist();
     }
+
     function deleteRecord(id) {
       const i = records.findIndex(x => x.id === id);
       if (i >= 0 && confirm('Delete this transfer?')) {
@@ -375,9 +393,11 @@
         persist();
       }
     }
+
     function render() {
       const q = document.getElementById('searchBox').value.trim().toLowerCase();
       const f = document.getElementById('statusFilter').value;
+
       const filtered = records.filter(r => {
         const matchesQ = !q || r.orderId.includes(q) || (r.customerName || '').toLowerCase().includes(q);
         const matchesF = f === 'all' || r.status === f;
@@ -404,6 +424,7 @@
         list.innerHTML = '<div class="help">No transfers found.</div>';
         return;
       }
+
       list.innerHTML = filtered.map(r => `
         <div class="item">
           <div class="item-top">
@@ -432,8 +453,15 @@
           </div>
         </div>`).join('');
     }
+
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      return String(s).replace(/[&<>"']/g, ch => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[ch]));
     }
 
     function showQr(orderId) {
@@ -456,6 +484,7 @@
       a.click();
       URL.revokeObjectURL(a.href);
     }
+
     function importDataPrompt() {
       const input = document.createElement('input');
       input.type = 'file';
@@ -478,6 +507,7 @@
       };
       input.click();
     }
+
     function clearAllData() {
       if (!confirm('Clear all transfer records?')) return;
       records.splice(0, records.length);
@@ -491,9 +521,14 @@
 
     async function startTicketCamera() {
       try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not available in this browser.');
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera access is not available in this browser.');
+        }
         stopTicketCamera();
-        ticketStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        ticketStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
         ticketVideo.srcObject = ticketStream;
         ticketCameraBox.classList.remove('hidden');
         document.getElementById('ocrResult').textContent = 'Camera opened. Hold ticket flat and tap CAPTURE TICKET.';
@@ -515,26 +550,130 @@
         document.getElementById('ocrResult').textContent = 'Open the camera first.';
         return;
       }
+
       const ctx = ticketCanvas.getContext('2d');
       ticketCanvas.width = ticketVideo.videoWidth || 1280;
       ticketCanvas.height = ticketVideo.videoHeight || 720;
       ctx.drawImage(ticketVideo, 0, 0, ticketCanvas.width, ticketCanvas.height);
+
       const dataUrl = ticketCanvas.toDataURL('image/png');
       const img = document.getElementById('photoPreview');
       img.src = dataUrl;
       img.classList.remove('hidden');
+
       stopTicketCamera();
-      document.getElementById('ocrResult').textContent = 'Ticket captured. Tap READ TICKET to confirm the values.';
+      document.getElementById('ocrResult').textContent = 'Ticket captured. Tap READ TICKET to run OCR.';
     }
 
-    function fakeReadTicket() {
-      const order = prompt('Enter detected ORDER ID from ticket photo:', document.getElementById('orderId').value || '');
-      if (order !== null) document.getElementById('orderId').value = cleanOrderId(order);
-      const customer = prompt('Enter detected CUSTOMER NAME:', document.getElementById('customerName').value || '');
-      if (customer !== null) document.getElementById('customerName').value = customer;
-      const count = prompt('Enter detected ITEM COUNT:', document.getElementById('itemCount').value || '1');
-      if (count !== null) document.getElementById('itemCount').value = Number(count) || 1;
-      document.getElementById('ocrResult').textContent = 'Ticket values filled. Review the form, then tap SAVE TRANSFER.';
+    async function fakeReadTicket() {
+      const img = document.getElementById('photoPreview');
+      const resultBox = document.getElementById('ocrResult');
+
+      if (!img.src || img.classList.contains('hidden')) {
+        resultBox.textContent = 'Capture a ticket first.';
+        return;
+      }
+
+      if (!window.Tesseract) {
+        resultBox.textContent = 'OCR engine failed to load. Check internet connection and try again.';
+        return;
+      }
+
+      resultBox.textContent = 'Reading ticket... please wait.';
+
+      try {
+        const result = await Tesseract.recognize(img.src, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+              resultBox.textContent = 'Reading ticket... ' + Math.round(m.progress * 100) + '%';
+            }
+          }
+        });
+
+        const text = ((result && result.data && result.data.text) || '').replace(/\r/g, '\n');
+        const parsed = parseTicketText(text);
+
+        if (parsed.orderId) document.getElementById('orderId').value = parsed.orderId;
+        if (parsed.customerName) document.getElementById('customerName').value = parsed.customerName;
+        if (parsed.itemCount) document.getElementById('itemCount').value = parsed.itemCount;
+        if (parsed.serviceType) document.getElementById('serviceType').value = parsed.serviceType;
+
+        const summary = [];
+        if (parsed.orderId) summary.push('Order ID: ' + parsed.orderId);
+        if (parsed.customerName) summary.push('Customer: ' + parsed.customerName);
+        if (parsed.itemCount) summary.push('Items: ' + parsed.itemCount);
+        if (parsed.serviceType) summary.push('Service: ' + parsed.serviceType);
+
+        resultBox.textContent = summary.length
+          ? 'OCR complete. ' + summary.join(' | ')
+          : 'OCR complete, but no clear fields were found. Please review and enter values manually if needed.';
+      } catch (e) {
+        resultBox.textContent = 'OCR failed. Please try again with better lighting, or enter values manually.';
+      }
+    }
+
+    function parseTicketText(text) {
+      const lines = text
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      const upperLines = lines.map(l => l.toUpperCase());
+
+      let orderId = '';
+      let customerName = '';
+      let itemCount = '';
+      let serviceType = '';
+
+      for (const line of lines) {
+        const invMatch = line.match(/(?:INV[#:\s]*|ORDER[#:\s]*)([A-Z]?\s*\d{4,})/i);
+        if (invMatch) {
+          orderId = cleanOrderId(invMatch[1]);
+          if (orderId) break;
+        }
+      }
+
+      if (!orderId) {
+        for (const line of lines) {
+          const longNum = line.match(/\b\d{5,8}\b/);
+          if (longNum) {
+            orderId = cleanOrderId(longNum[0]);
+            break;
+          }
+        }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const upper = upperLines[i];
+        if (
+          /^[A-Z'.,\- ]{4,}$/.test(upper) &&
+          /,/.test(line) &&
+          !/FABRICARE|FORT|HUNTER|THANK|TOTAL|DUE|TAX|PHONE|DATE|TIME/.test(upper)
+        ) {
+          customerName = line.replace(/\s{2,}/g, ' ').trim();
+          break;
+        }
+      }
+
+      for (const line of upperLines) {
+        const countMatch = line.match(/\b(\d{1,2})\s*(PC|PCS|PIECE|PIECES)\b/);
+        if (countMatch) {
+          itemCount = Number(countMatch[1]) || '';
+          break;
+        }
+      }
+
+      if (!itemCount) itemCount = 1;
+
+      const joined = upperLines.join(' ');
+      if (/DRY/.test(joined)) serviceType = 'Dry Cleaning';
+      else if (/ALTER/.test(joined)) serviceType = 'Alteration';
+      else if (/EMBROID/.test(joined)) serviceType = 'Embroidery';
+      else if (/WEDDING|GOWN/.test(joined)) serviceType = 'Wedding Gown';
+      else if (/DTF/.test(joined)) serviceType = 'DTF';
+
+      return { orderId, customerName, itemCount, serviceType };
     }
 
     render();
