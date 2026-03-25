@@ -1,161 +1,734 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fabricare Transfer System</title>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-<style>
-body {font-family: Arial; background:#f5f7fb; padding:20px;}
-h1 {font-size:28px;}
-input, select {padding:12px; margin:6px 0; width:100%;}
-button {padding:12px; margin:5px; font-weight:bold;}
-.card {background:#fff; padding:15px; border-radius:10px; margin-bottom:15px;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fabricare Transfer System</title>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #dbe2ea;
+      --blue: #1d4ed8;
+      --green: #15803d;
+      --orange: #c2410c;
+      --red: #b91c1c;
+      --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .title {
+      font-size: 34px;
+      font-weight: 800;
+      margin: 8px 0 6px;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .stats {
+      grid-column: span 12;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    .stat {
+      padding: 18px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    .stat .label {
+      font-size: 15px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .stat .num {
+      font-size: 34px;
+      font-weight: 800;
+      margin-top: 8px;
+    }
+    .left { grid-column: span 5; }
+    .right { grid-column: span 7; }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 19px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 15px;
+      font-weight: 800;
+      margin: 0 0 8px;
+      color: #243447;
+    }
+    input, select {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      border-radius: 14px;
+      border: 1px solid #cfd8e3;
+      background: #fff;
+    }
+    .actions, .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      color: white;
+      background: var(--blue);
+    }
+    button.secondary { background: #344054; }
+    button.green { background: var(--green); }
+    button.orange { background: var(--orange); }
+    button.red { background: var(--red); }
+    button.light {
+      background: #eef2ff;
+      color: #1e3a8a;
+      border: 1px solid #c7d2fe;
+    }
+    .toolbar { margin-bottom: 14px; }
+    .toolbar input, .toolbar select { max-width: 240px; }
+    .list { display: grid; gap: 12px; }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      background: #fff;
+    }
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .order-id {
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .b-intransit { background: #dbeafe; color: #1d4ed8; }
+    .b-received { background: #e0f2fe; color: #0369a1; }
+    .b-returned { background: #dcfce7; color: #15803d; }
+    .b-exception { background: #fee2e2; color: #b91c1c; }
+    .b-completed { background: #ecfccb; color: #3f6212; }
+    .small-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .small-actions button {
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    .help {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .video-wrap, .ocr-box {
+      margin-top: 12px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fafcff;
+    }
+    video, canvas, img.preview {
+      width: 100%;
+      border-radius: 12px;
+      background: #000;
+    }
+    .hidden { display: none; }
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .left, .right { grid-column: span 12; }
+      .row { grid-template-columns: 1fr; }
+      .title { font-size: 28px; }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="wrap">
+    <div class="title">FABRICARE STORE TRANSFER SYSTEM</div>
+    <div class="subtitle">Large English version for internal store transfer tracking</div>
 
-<h1>FABRICARE TRANSFER SYSTEM</h1>
+    <div class="stats" id="stats"></div>
 
-<div class="card">
+    <div class="grid" style="margin-top:16px;">
+      <div class="left card">
+        <h2>CREATE TRANSFER</h2>
 
-<label>FROM STORE</label>
-<select id="fromStore"></select>
+        <div class="row">
+          <div>
+            <label for="fromStore">FROM STORE</label>
+            <select id="fromStore"></select>
+          </div>
+          <div>
+            <label for="toStore">TO STORE</label>
+            <select id="toStore"></select>
+          </div>
+        </div>
 
-<label>TO STORE</label>
-<select id="toStore"></select>
+        <div class="row">
+          <div>
+            <label for="orderId">ORDER ID</label>
+            <input id="orderId" placeholder="Example: 289562" />
+          </div>
+          <div>
+            <label for="customerName">CUSTOMER NAME</label>
+            <input id="customerName" placeholder="Example: WARNER, LENA" />
+          </div>
+        </div>
 
-<label>ORDER ID</label>
-<input id="orderId">
+        <div class="row">
+          <div>
+            <label for="itemCount">ITEM COUNT</label>
+            <input id="itemCount" type="number" min="1" value="1" />
+          </div>
+          <div>
+            <label for="serviceType">SERVICE TYPE</label>
+            <select id="serviceType">
+              <option>Dry Cleaning</option>
+              <option>Alteration</option>
+              <option>Embroidery</option>
+              <option>DTF</option>
+              <option>Wedding Gown</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
 
-<label>CUSTOMER NAME</label>
-<input id="customerName">
+        <div class="row">
+          <div>
+            <label for="sentBy">SENT BY</label>
+            <input id="sentBy" placeholder="Employee name" />
+          </div>
+          <div>
+            <label for="notes">SPECIAL INSTRUCTIONS</label>
+            <input id="notes" placeholder="Optional instructions" />
+          </div>
+        </div>
 
-<label>ITEM COUNT</label>
-<input id="itemCount" type="number" value="1">
+        <div class="actions">
+          <button onclick="saveTransfer()">SAVE TRANSFER</button>
+          <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
+          <button class="secondary" onclick="manualFillPrompt()">MANUAL ENTRY</button>
+        </div>
 
-<label>SERVICE TYPE</label>
-<select id="serviceType">
-<option>Dry Cleaning</option>
-<option>Alteration</option>
-<option>Embroidery</option>
-<option>DTF</option>
-<option>Wedding Gown</option>
-</select>
+        <div class="help">Use the live camera to capture a ticket directly. Then tap READ TICKET for OCR.</div>
 
-<label>SPECIAL INSTRUCTIONS</label>
-<input id="notes">
+        <div class="ocr-box">
+          <h3>LIVE TICKET CAMERA + AUTO OCR</h3>
 
-<br>
+          <div id="ticketCameraBox" class="video-wrap hidden">
+            <video id="ticketVideo" autoplay playsinline></video>
+            <canvas id="ticketCanvas" class="hidden"></canvas>
+            <div class="actions">
+              <button class="green" onclick="captureTicketPhoto()">CAPTURE TICKET</button>
+              <button class="red" onclick="stopTicketCamera()">STOP CAMERA</button>
+            </div>
+          </div>
 
-<button onclick="startCamera()">OPEN CAMERA</button>
-<button onclick="capture()">CAPTURE</button>
-<button onclick="readOCR()">READ TICKET</button>
-<button onclick="save()">SAVE</button>
+          <img id="photoPreview" class="preview hidden" alt="Ticket preview" />
 
-<br><br>
+          <div class="actions">
+            <button class="light" onclick="startTicketCamera()">OPEN CAMERA</button>
+            <button class="green" onclick="readTicketOCR()">READ TICKET</button>
+          </div>
 
-<video id="video" autoplay playsinline style="width:100%"></video>
-<canvas id="canvas" style="display:none"></canvas>
-<img id="preview" style="width:100%; display:none">
+          <div id="ocrResult" class="help">This version opens the camera directly and uses OCR to read the ticket automatically. Review the extracted values before saving.</div>
+        </div>
+      </div>
 
-<div id="status"></div>
+      <div class="right card">
+        <h2>TRANSFER LIST</h2>
+        <div class="toolbar">
+          <input id="searchBox" placeholder="Search order ID / customer" oninput="render()" />
+          <select id="statusFilter" onchange="render()">
+            <option value="all">ALL STATUS</option>
+            <option value="In Transit">IN TRANSIT</option>
+            <option value="Received">RECEIVED</option>
+            <option value="Returned">RETURNED</option>
+            <option value="Completed">COMPLETED</option>
+            <option value="Exception">EXCEPTION</option>
+          </select>
+          <button class="secondary" onclick="exportData()">EXPORT JSON</button>
+          <button class="secondary" onclick="importDataPrompt()">IMPORT JSON</button>
+          <button class="red" onclick="clearAllData()">CLEAR ALL</button>
+        </div>
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+  </div>
 
-</div>
+  <script>
+    const stores = [
+      'FABRICARE',
+      'FORT STEWART ALT',
+      'FORT STEWART D/C',
+      'HUNTER ALT',
+      'HUNTER D/C'
+    ];
 
-<div id="list"></div>
+    const STORAGE_KEY = 'fabricare_transfer_records_final_v1';
+    const records = load();
 
-<script>
+    const fromStore = document.getElementById('fromStore');
+    const toStore = document.getElementById('toStore');
 
-const stores = [
-'FABRICARE',
-'FORT STEWART ALT',
-'FORT STEWART D/C',
-'HUNTER ALT',
-'HUNTER D/C'
-];
+    stores.forEach(s => {
+      fromStore.add(new Option(s, s));
+      toStore.add(new Option(s, s));
+    });
 
-stores.forEach(s=>{
-document.getElementById('fromStore').add(new Option(s,s));
-document.getElementById('toStore').add(new Option(s,s));
-});
+    fromStore.value = 'FABRICARE';
+    toStore.value = 'FORT STEWART D/C';
 
-let stream;
+    function load() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      } catch {
+        return [];
+      }
+    }
 
-async function startCamera(){
-stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-document.getElementById("video").srcObject = stream;
-}
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      render();
+    }
 
-function capture(){
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-canvas.width = video.videoWidth;
-canvas.height = video.videoHeight;
-canvas.getContext("2d").drawImage(video,0,0);
+    function cleanOrderId(value) {
+      return String(value || '').replace(/[^0-9]/g, '');
+    }
 
-document.getElementById("preview").src = canvas.toDataURL();
-document.getElementById("preview").style.display="block";
+    function saveTransfer() {
+      const orderId = cleanOrderId(document.getElementById('orderId').value);
+      if (!orderId) {
+        alert('Please enter an Order ID.');
+        return;
+      }
 
-if(stream){stream.getTracks().forEach(t=>t.stop());}
-}
+      const rec = {
+        id: crypto.randomUUID ? crypto.randomUUID() : 'id_' + Date.now(),
+        orderId,
+        customerName: document.getElementById('customerName').value.trim(),
+        itemCount: Number(document.getElementById('itemCount').value || 1),
+        serviceType: document.getElementById('serviceType').value,
+        fromStore: document.getElementById('fromStore').value,
+        toStore: document.getElementById('toStore').value,
+        sentBy: document.getElementById('sentBy').value.trim(),
+        notes: document.getElementById('notes').value.trim(),
+        status: 'In Transit',
+        createdAt: new Date().toLocaleString(),
+        receivedAt: '',
+        returnedAt: ''
+      };
 
-async function readOCR(){
-document.getElementById("status").innerText="Reading...";
+      records.unshift(rec);
+      clearForm();
+      persist();
+    }
 
-const { data:{ text } } = await Tesseract.recognize(
-document.getElementById("preview").src,
-"eng"
-);
+    function clearForm() {
+      ['orderId', 'customerName', 'sentBy', 'notes'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('itemCount').value = 1;
+      document.getElementById('serviceType').value = 'Dry Cleaning';
 
-let order = (text.match(/\d{5,}/)||[""])[0];
-let name = (text.match(/[A-Z]+,\s*[A-Z]+/)||[""])[0];
-let count = (text.match(/\d+\s*PC/i)||["1"])[0].replace(/\D/g,'');
+      const preview = document.getElementById('photoPreview');
+      preview.src = '';
+      preview.classList.add('hidden');
 
-document.getElementById("orderId").value = order;
-document.getElementById("customerName").value = name;
-document.getElementById("itemCount").value = count || 1;
+      document.getElementById('ocrResult').textContent = 'Ready for next ticket.';
+    }
 
-document.getElementById("status").innerText="OCR DONE";
-}
+    function statusClass(status) {
+      return {
+        'In Transit': 'b-intransit',
+        'Received': 'b-received',
+        'Returned': 'b-returned',
+        'Completed': 'b-completed',
+        'Exception': 'b-exception'
+      }[status] || 'b-intransit';
+    }
 
-function save(){
-const data = {
-order:document.getElementById("orderId").value,
-name:document.getElementById("customerName").value,
-count:document.getElementById("itemCount").value,
-from:document.getElementById("fromStore").value,
-to:document.getElementById("toStore").value,
-notes:document.getElementById("notes").value
-};
+    function updateStatus(id, status) {
+      const r = records.find(x => x.id === id);
+      if (!r) return;
 
-let list = JSON.parse(localStorage.getItem("data")||"[]");
-list.push(data);
-localStorage.setItem("data",JSON.stringify(list));
+      r.status = status;
+      if (status === 'Received') r.receivedAt = new Date().toLocaleString();
+      if (status === 'Returned' || status === 'Completed') r.returnedAt = new Date().toLocaleString();
 
-render();
-}
+      persist();
+    }
 
-function render(){
-let list = JSON.parse(localStorage.getItem("data")||"[]");
-document.getElementById("list").innerHTML = list.map(i=>`
-<div class="card">
-<b>ORDER:</b> ${i.order}<br>
-<b>CUSTOMER:</b> ${i.name}<br>
-<b>FROM:</b> ${i.from}<br>
-<b>TO:</b> ${i.to}<br>
-<b>ITEMS:</b> ${i.count}<br>
-<b>SPECIAL INSTRUCTIONS:</b> ${i.notes || "-"}
-</div>
-`).join('');
-}
+    function markException(id) {
+      const note = prompt('Describe the issue:') || '';
+      const r = records.find(x => x.id === id);
+      if (!r) return;
 
-render();
+      r.status = 'Exception';
+      r.notes = [r.notes, note].filter(Boolean).join(' | ');
+      persist();
+    }
 
-</script>
+    function deleteRecord(id) {
+      const i = records.findIndex(x => x.id === id);
+      if (i >= 0 && confirm('Delete this transfer?')) {
+        records.splice(i, 1);
+        persist();
+      }
+    }
 
+    function render() {
+      const q = document.getElementById('searchBox').value.trim().toLowerCase();
+      const f = document.getElementById('statusFilter').value;
+
+      const filtered = records.filter(r => {
+        const matchesQ =
+          !q ||
+          r.orderId.includes(q) ||
+          (r.customerName || '').toLowerCase().includes(q);
+
+        const matchesF = f === 'all' || r.status === f;
+        return matchesQ && matchesF;
+      });
+
+      const stats = {
+        total: records.length,
+        inTransit: records.filter(r => r.status === 'In Transit').length,
+        received: records.filter(r => r.status === 'Received').length,
+        completed: records.filter(r => r.status === 'Completed' || r.status === 'Returned').length,
+        issues: records.filter(r => r.status === 'Exception').length,
+      };
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><div class="label">TOTAL</div><div class="num">${stats.total}</div></div>
+        <div class="stat"><div class="label">IN TRANSIT</div><div class="num">${stats.inTransit}</div></div>
+        <div class="stat"><div class="label">RECEIVED</div><div class="num">${stats.received}</div></div>
+        <div class="stat"><div class="label">COMPLETED</div><div class="num">${stats.completed}</div></div>
+        <div class="stat"><div class="label">ISSUES</div><div class="num">${stats.issues}</div></div>
+      `;
+
+      const list = document.getElementById('list');
+      if (!filtered.length) {
+        list.innerHTML = '<div class="help">No transfers found.</div>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(r => `
+        <div class="item">
+          <div class="item-top">
+            <div>
+              <div class="order-id">ORDER #${r.orderId}</div>
+              <div class="meta">
+                Customer: ${escapeHtml(r.customerName || '-')}<br>
+                Items: ${r.itemCount} • Service: ${escapeHtml(r.serviceType)}<br>
+                ${escapeHtml(r.fromStore)} → ${escapeHtml(r.toStore)}<br>
+                Sent By: ${escapeHtml(r.sentBy || '-')}<br>
+                Created: ${escapeHtml(r.createdAt)}<br>
+                ${r.receivedAt ? 'Received: ' + escapeHtml(r.receivedAt) + '<br>' : ''}
+                ${r.returnedAt ? 'Returned: ' + escapeHtml(r.returnedAt) + '<br>' : ''}
+                Special Instructions: ${escapeHtml(r.notes || '-')}
+              </div>
+            </div>
+            <div class="badge ${statusClass(r.status)}">${r.status.toUpperCase()}</div>
+          </div>
+          <div class="small-actions">
+            <button class="green" onclick="updateStatus('${r.id}','Received')">MARK RECEIVED</button>
+            <button class="orange" onclick="updateStatus('${r.id}','Returned')">MARK RETURNED</button>
+            <button class="secondary" onclick="updateStatus('${r.id}','Completed')">MARK COMPLETED</button>
+            <button class="red" onclick="markException('${r.id}')">REPORT ISSUE</button>
+            <button class="red" onclick="deleteRecord('${r.id}')">DELETE</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, ch => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[ch]));
+    }
+
+    function manualFillPrompt() {
+      const value = prompt('Enter Order ID:');
+      if (value) {
+        document.getElementById('orderId').value = cleanOrderId(value);
+      }
+    }
+
+    function exportData() {
+      const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fabricare_transfer_data.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importDataPrompt() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = e => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const incoming = JSON.parse(reader.result);
+            if (!Array.isArray(incoming)) throw new Error();
+
+            records.splice(0, records.length, ...incoming);
+            persist();
+          } catch {
+            alert('Invalid JSON file.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function clearAllData() {
+      if (!confirm('Clear all transfer records?')) return;
+      records.splice(0, records.length);
+      persist();
+    }
+
+    let ticketStream = null;
+    const ticketVideo = document.getElementById('ticketVideo');
+    const ticketCanvas = document.getElementById('ticketCanvas');
+    const ticketCameraBox = document.getElementById('ticketCameraBox');
+
+    async function startTicketCamera() {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera access is not available in this browser.');
+        }
+
+        stopTicketCamera();
+
+        ticketStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false
+        });
+
+        ticketVideo.srcObject = ticketStream;
+        ticketCameraBox.classList.remove('hidden');
+        document.getElementById('ocrResult').textContent = 'Camera opened. Hold ticket flat and tap CAPTURE TICKET.';
+      } catch (e) {
+        document.getElementById('ocrResult').textContent = e.message || 'Could not open camera.';
+      }
+    }
+
+    function stopTicketCamera() {
+      if (ticketStream) {
+        ticketStream.getTracks().forEach(t => t.stop());
+        ticketStream = null;
+      }
+      ticketVideo.srcObject = null;
+    }
+
+    function captureTicketPhoto() {
+      if (!ticketVideo.srcObject) {
+        document.getElementById('ocrResult').textContent = 'Open the camera first.';
+        return;
+      }
+
+      const ctx = ticketCanvas.getContext('2d');
+      ticketCanvas.width = ticketVideo.videoWidth || 1280;
+      ticketCanvas.height = ticketVideo.videoHeight || 720;
+      ctx.drawImage(ticketVideo, 0, 0, ticketCanvas.width, ticketCanvas.height);
+
+      const dataUrl = ticketCanvas.toDataURL('image/png');
+      const img = document.getElementById('photoPreview');
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+
+      stopTicketCamera();
+      document.getElementById('ocrResult').textContent = 'Ticket captured. Tap READ TICKET to run OCR.';
+    }
+
+    async function readTicketOCR() {
+      const img = document.getElementById('photoPreview');
+      const resultBox = document.getElementById('ocrResult');
+
+      if (!img.src || img.classList.contains('hidden')) {
+        resultBox.textContent = 'Capture a ticket first.';
+        return;
+      }
+
+      if (!window.Tesseract) {
+        resultBox.textContent = 'OCR engine failed to load. Check internet connection and try again.';
+        return;
+      }
+
+      resultBox.textContent = 'Reading ticket... please wait.';
+
+      try {
+        const result = await Tesseract.recognize(img.src, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+              resultBox.textContent = 'Reading ticket... ' + Math.round(m.progress * 100) + '%';
+            }
+          }
+        });
+
+        const text = ((result && result.data && result.data.text) || '').replace(/\r/g, '\n');
+        const parsed = parseTicketText(text);
+
+        if (parsed.orderId) document.getElementById('orderId').value = parsed.orderId;
+        if (parsed.customerName) document.getElementById('customerName').value = parsed.customerName;
+        if (parsed.itemCount) document.getElementById('itemCount').value = parsed.itemCount;
+        if (parsed.serviceType) document.getElementById('serviceType').value = parsed.serviceType;
+
+        const summary = [];
+        if (parsed.orderId) summary.push('Order ID: ' + parsed.orderId);
+        if (parsed.customerName) summary.push('Customer: ' + parsed.customerName);
+        if (parsed.itemCount) summary.push('Items: ' + parsed.itemCount);
+        if (parsed.serviceType) summary.push('Service: ' + parsed.serviceType);
+
+        resultBox.textContent = summary.length
+          ? 'OCR complete. ' + summary.join(' | ')
+          : 'OCR complete, but no clear fields were found. Please review and enter values manually if needed.';
+      } catch (e) {
+        resultBox.textContent = 'OCR failed. Please try again with better lighting, or enter values manually.';
+      }
+    }
+
+    function parseTicketText(text) {
+      const lines = text
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      const upperLines = lines.map(l => l.toUpperCase());
+
+      let orderId = '';
+      let customerName = '';
+      let itemCount = '';
+      let serviceType = '';
+
+      for (const line of lines) {
+        const invMatch = line.match(/(?:INV[#:\s]*|ORDER[#:\s]*)([A-Z]?\s*\d{4,})/i);
+        if (invMatch) {
+          orderId = cleanOrderId(invMatch[1]);
+          if (orderId) break;
+        }
+      }
+
+      if (!orderId) {
+        for (const line of lines) {
+          const longNum = line.match(/\b\d{5,8}\b/);
+          if (longNum) {
+            orderId = cleanOrderId(longNum[0]);
+            break;
+          }
+        }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const upper = upperLines[i];
+
+        if (
+          /^[A-Z'.,\- ]{4,}$/.test(upper) &&
+          /,/.test(line) &&
+          !/FABRICARE|FORT|HUNTER|THANK|TOTAL|DUE|TAX|PHONE|DATE|TIME/.test(upper)
+        ) {
+          customerName = line.replace(/\s{2,}/g, ' ').trim();
+          break;
+        }
+      }
+
+      for (const line of upperLines) {
+        const countMatch = line.match(/\b(\d{1,2})\s*(PC|PCS|PIECE|PIECES)\b/);
+        if (countMatch) {
+          itemCount = Number(countMatch[1]) || '';
+          break;
+        }
+      }
+
+      if (!itemCount) itemCount = 1;
+
+      const joined = upperLines.join(' ');
+      if (/DRY/.test(joined)) serviceType = 'Dry Cleaning';
+      else if (/ALTER/.test(joined)) serviceType = 'Alteration';
+      else if (/EMBROID/.test(joined)) serviceType = 'Embroidery';
+      else if (/WEDDING|GOWN/.test(joined)) serviceType = 'Wedding Gown';
+      else if (/DTF/.test(joined)) serviceType = 'DTF';
+
+      return { orderId, customerName, itemCount, serviceType };
+    }
+
+    render();
+  </script>
 </body>
 </html>
